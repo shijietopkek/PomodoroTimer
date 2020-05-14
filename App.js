@@ -8,6 +8,7 @@ import Timer from './components/timer';
 import vibrate from './utils/vibrate';
 import Slider from '@react-native-community/slider';
 import { RNNotificationBanner } from 'react-native-notification-banner';
+import ModalSelector from 'react-native-modal-selector'
 
 import { vw, vh, vmin, vmax } from 'react-native-expo-viewport-units';
 import {
@@ -55,7 +56,7 @@ function ButtonsRow1({ children }) {
 class App extends React.Component {
 
 
-
+  
   constructor(props) {
     super(props),
     this.state = {
@@ -66,8 +67,16 @@ class App extends React.Component {
       timer: null,
       paused: false,
       playing: false,
-      musicPlaying:true
+      ticking:true,
+      musicfile:"",
+
+
     }
+    this.p= new Player(this.state.musicfile,{autoDestroy:false,continuesToPlayInBackground:true,mixWithOthers:true})
+    
+
+
+
     this.setWorkTimer = this.setWorkTimer.bind(this);
     this.setBreakTimer = this.setBreakTimer.bind(this);
     this.playButton = this.playButton.bind(this);
@@ -77,9 +86,10 @@ class App extends React.Component {
     this.toggleStatus = this.toggleStatus.bind(this);
     this.toggleStatus1 = this.toggleStatus1.bind(this);
     this.toggleStatus2 = this.toggleStatus2.bind(this);
-    this.toggleMusicPlaying = this.toggleMusicPlaying.bind(this);
+    this.toggleTicking = this.toggleTicking.bind(this);
   }
 
+  
 
   setWorkTimer(val) {
     let newTime = getTime(val);
@@ -105,14 +115,31 @@ class App extends React.Component {
     }   
   }
 
+  notifBanner(title, subTitle, withIcon, duration){
+      return(
+          RNNotificationBanner.Show({ title: title, subTitle: subTitle, withIcon: withIcon, duration:duration})
+      )
+  }
+
   playButton() {
-    
+    if(this.state.paused==false && this.state.playing==false){
+      this.p= new Player(this.state.musicfile,{autoDestroy:false,continuesToPlayInBackground:true,mixWithOthers:true})
+      
+    this.p.play()
+    //
+    }
+    else{
+      this.p.play()
+      //
+    }
     
 
     if(this.state.working){
-      RNNotificationBanner.Show({ title: "Playing", subTitle: "Time to Focus!", withIcon: false, duration:3000})
+      this.notifBanner("Playing", "Time to Focus!", false, 2000)
+      //RNNotificationBanner.Show({ title: "Playing", subTitle: "Time to Focus!", withIcon: false, duration:2000})
     }else{
-      RNNotificationBanner.Show({title:"Playing",subTitle:"Enjoy your break!", withIcon: false, duration:3000})
+      this.notifBanner("Playing", "Enjoy your break!", false, 2000)
+      //RNNotificationBanner.Show({title:"Playing",subTitle:"Enjoy your break!", withIcon: false, duration:2000})
     }
 
     if (this.state.paused === true || this.state.playing === false) { 
@@ -131,7 +158,9 @@ this.countdown()
   }
 
   pauseButton () {
-    RNNotificationBanner.Show({title:"Paused",subTitle:`Don't stop! ${this.state.currentTime} more to go`, withIcon: false, duration:3000})
+    this.p.pause()
+    this.notifBanner("Paused",`Don't stop! ${this.state.currentTime} more to go`,false,2000)
+    //RNNotificationBanner.Show({title:"Paused",subTitle:`Don't stop! ${this.state.currentTime} more to go`, withIcon: false, duration:2000})
     if (this.state.paused === false && this.state.playing === true) {
       BackgroundTimer.clearInterval(this.state.timer);
       this.setState({
@@ -146,12 +175,15 @@ this.countdown()
   }
 
   resetButton () {
-
+    this.p.destroy()
+    this.p= new Player(this.state.musicfile,{autoDestroy:false,continuesToPlayInBackground:true,mixWithOthers:true})
+    
     if(this.state.timer){
       BackgroundTimer.clearInterval(this.state.timer);
     }
     if(this.state.working===true){
-      RNNotificationBanner.Show({title:"Reset",subTitle:`Timer reset to ${this.state.workTime}`, withIcon: false, duration:3000})
+      this.notifBanner("Reset",`Timer reset to ${this.state.workTime}`,false,2000)
+      //RNNotificationBanner.Show({title:"Reset",subTitle:`Timer reset to ${this.state.workTime}`, withIcon: false, duration:2000})
       this.setState({
       currentTime: this.state.workTime,
       playing: false,
@@ -160,7 +192,8 @@ this.countdown()
       timer: null
     })
   }else{
-    RNNotificationBanner.Show({title:"Reset",subTitle:`Timer reset to ${this.state.breakTime}`, withIcon: false, duration:3000})
+    this.notifBanner("Reset",`Timer reset to ${this.state.breakTime}`,false,2000 )
+    //RNNotificationBanner.Show({title:"Reset",subTitle:`Timer reset to ${this.state.breakTime}`, withIcon: false, duration:2000})
 
     this.setState({
       currentTime: this.state.breakTime,
@@ -173,30 +206,36 @@ this.countdown()
     
   }
 
-  toggleMusicPlaying(){
+  toggleTicking(){
     this.setState({
-      musicPlaying: !this.state.musicPlaying
+      ticking: !this.state.ticking
     })
   }
 
   countdown() {
     if (this.state.currentTime === "00:00" && this.state.playing === true) {
       if(this.state.working){
-  
-        RNNotificationBanner.Show({title:"End of Work",subTitle:"Congratulations! You deserve a break.", withIcon: false, duration:3000})
+        this.notifBanner("End of Work","Congratulations! You deserve a break.",false,2000 )
+        RNNotificationBanner.Show({title:"End of Work",subTitle:"Congratulations! You deserve a break.", withIcon: false, duration:2000})
       }else{
-        RNNotificationBanner.Show({title:"End of Break",subTitle:"Let's resume work.", withIcon: false, duration:3000})
+        this.notifBanner("End of Break","Let's resume work.",false,2000 )
+        //RNNotificationBanner.Show({title:"End of Break",subTitle:"Let's resume work.", withIcon: false, duration:2000})
       }
 
       vibrate();
+      if(this.p){
+        this.p.destroy()
+        this.p= new Player(this.state.musicfile,{autoDestroy:false,continuesToPlayInBackground:true,mixWithOthers:true})
+      
+      }
       new Player('alarm.mp3',{continuesToPlayInBackground:true}).play()
       this.toggleStatus();
       
       
 
     } else {
-      if(this.state.musicPlaying){
-        new Player('ticking1.mp3',{continuesToPlayInBackground:true}).play()
+      if(this.state.ticking){
+        new Player('ticking1.mp3',{continuesToPlayInBackground:true, mixWithOthers:true}).play()
       }
       let sec = this.state.currentTime.slice(3);
       let min = this.state.currentTime.slice(0, 2);
@@ -241,6 +280,9 @@ this.countdown()
     if(this.state.timer){
       BackgroundTimer.clearInterval(this.state.timer);
     }
+    this.p.destroy()
+    this.p= new Player(this.state.musicfile,{autoDestroy:false,continuesToPlayInBackground:true,mixWithOthers:true})
+      
     this.setState({
       working: false,
       currentTime: this.state.breakTime,
@@ -254,6 +296,9 @@ this.countdown()
     if(this.state.timer){
       BackgroundTimer.clearInterval(this.state.timer);
     }
+    this.p.destroy()
+    this.p= new Player(this.state.musicfile,{autoDestroy:false,continuesToPlayInBackground:true,mixWithOthers:true})
+      
     this.setState({
       working: true,
       currentTime: this.state.workTime,
@@ -266,29 +311,65 @@ this.countdown()
 
 
 
+
   render() {
+    let index = 0;
+    const modalTextStyle={
+      color: 'white',
+      fontSize: 24
+    }
+    const data = [
+            { key: index++, section: true, label: 'Select Background Music' },
+            { key: index++, label: '',component: <Text style={modalTextStyle}>None</Text> },
+            { key: index++, label: 'white_noise.mp3',component: <Text style={modalTextStyle}>White Noise</Text> },
+            { key: index++, label: 'forest.mp3' ,component: <Text style={modalTextStyle}>Forest</Text>},
+            { key: index++, label: 'ocean.mp3',component: <Text style={modalTextStyle}>Ocean</Text>},
+            { key: index++, label: 'rain.mp3',component: <Text style={modalTextStyle}>Rain</Text>},
+            { key: index++, label: 'classical.mp3',component: <Text style={modalTextStyle}>Classical</Text>},
+            { key: index++, label: 'ragtime.mp3',component: <Text style={modalTextStyle}>Ragtime</Text>}
+        ];
     return (
       <View style={styles.container}>
         <View style={styles.timerUi}>
          <ButtonsRow1>
-            {this.state.musicPlaying && (
+            {this.state.ticking && (
               <Buttons 
-            icon="music"
+            icon="clock-o"
             color='#FFFFFF'
-            background='#00aced'
-            onPress={this.toggleMusicPlaying} 
+            background='#3D3D3D'
+            onPress={()=>{this.toggleTicking();this.notifBanner("Ticking Timer", "Disabled",false,2000)}} 
   
                      />
               ) }
-            {!this.state.musicPlaying && (
+            {!this.state.ticking && (
               <Buttons 
-            icon="music"
-            color='#cccccc'
-            background='#777777'
-            onPress={this.toggleMusicPlaying} 
+            icon="clock-o"
+            color='#777777'
+            background='#333333'
+            onPress={()=>{this.toggleTicking();this.notifBanner("Ticking Timer", "Enabled",false,2000)}} 
   
                      />
               )}
+            <ModalSelector
+            selectedItemTextStyle={{color:'#696969'}}
+                    sectionTextStyle={{color:'#444444',fontSize:20}}
+                    cancelTextStyle={{color:'#444444',fontSize:20}}
+                    data={data}
+                    initValue="Select background music!"
+                    supportedOrientations={['landscape']}
+                    accessible={true}
+                    scrollViewAccessibilityLabel={'Scrollable options'}
+                    cancelButtonAccessibilityLabel={'Cancel Button'}
+                    onChange={(option)=>{this.setState({musicfile:option.label}); this.notifBanner("Background Music", `${option.label}`,false,2000)}}>
+ 
+                    <Buttons 
+            icon="music"
+            color='#FFFFFF'
+            background='#00aced'  
+                     />
+ 
+                </ModalSelector>
+              
             
           </ButtonsRow1>
                 <Timer currentTime={this.state.currentTime}/>
@@ -396,7 +477,7 @@ this.countdown()
           <View style={styles.textCon}>
                     <Text style={styles.colorGrey}>{DATA.minTimer}</Text>
                     <Text style={styles.colorYellow}>
-                        {parseInt(this.state.workTime.slice(0,2))}
+                        {this.state.workTime==="25:00" ? this.state.workTime.slice(0,2).replace(/^0+/, '')+" (recommended)":this.state.workTime.slice(0,2).replace(/^0+/, '')}
                     </Text>
                     <Text style={styles.colorGrey}>{DATA.maxTimer}</Text>
                 </View>
@@ -420,7 +501,7 @@ this.countdown()
           <View style={styles.textCon}>
                     <Text style={styles.colorGrey}>{DATA.minBreak}</Text>
                     <Text style={styles.colorYellow}>
-                        {parseInt(this.state.breakTime.slice(0,2))}
+                        {this.state.breakTime==="05:00" ? this.state.breakTime.slice(0,2).replace(/^0+/, '')+ " (recommended)":this.state.breakTime.slice(0,2).replace(/^0+/, '')}
                     </Text>
                     <Text style={styles.colorGrey}>{DATA.maxBreak}</Text>
                 </View>
